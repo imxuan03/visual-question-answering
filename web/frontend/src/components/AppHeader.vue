@@ -2,11 +2,12 @@
     <nav class="navbar navbar-expand-lg">
         <div class="navbar-brand-container d-flex justify-content-between w-100 container">
             <a href="/" class="navbar-brand">
-                <h4>Leaf Classification</h4>
+                <img class="logo" src="/logo.jpg" alt="">
+                <span class="brand-text ms-2">RiceAI</span>
             </a>
             <div class="ms-auto navbar-nav">
-                <li class="nav-item"><b>Trang chủ</b></li>
-                <li class="nav-item"><b>Liên hệ</b></li>
+                <li class="nav-item"><b>Home</b></li>
+                <li class="nav-item"><b>Contact</b></li>
             </div>
         </div>
     </nav>
@@ -24,13 +25,19 @@ export default {
 <style scoped>
 
 .logo{
-    width: 100px;
+    width: 70px;
     height: auto;
+}
+.brand-text {
+    font-size: 18px; /* Kích thước chữ */
+    font-weight: bold; /* Chữ đậm */
+    color: #333; /* Màu chữ */
+    white-space: nowrap; /* Ngăn chữ bị xuống dòng */
 }
 
 .navbar {
     background-color: #fff;
-    height: 80px;
+    height: 90px;
     position: sticky;
     width: 100%;
     top: 0;
