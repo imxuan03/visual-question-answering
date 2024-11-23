@@ -1,175 +1,319 @@
 <template>
-    <div class="container">
-        <h3>Leaf Classification</h3>
-        <div class="formInput">
-            <div class="form-box">
-                <form @submit.prevent="uploadImage">
-                    <label for="imageInput" style="margin-right:5px;"><b>Upload an image here to identify:</b></label>
-                    <input class="input-button" type="file" id="imageInput" @change="onFileChange" />
-                    <button class="submit-button" type="submit" :disabled="!selectedFile">Upload</button>
-                </form>
-                <div v-if="loading">Loading...</div>
-                <div v-else-if="error">{{ error }}</div>
+    <div class="chat-container">
+        <!-- Hiển thị tin nhắn -->
+        <div class="messages">
+            <div v-for="(message, index) in chatMessages" :key="index" :class="['message', message.sender]">
+                <span v-if="message.text">{{ message.text }}</span>
+                <img v-if="message.image" :src="message.image" alt="Hình ảnh" class="message-image" />
             </div>
-            <hr>
-            <div v-if="imageUrl" class="image-container">
-                <h4>Uploaded Image:</h4>
-                <img :src="imageUrl" alt="Uploaded Image" style="width:400px; height:auto;" />
-                <ul v-if="diseases.length">
-                    <li v-for="(disease, index) in diseases" :key="index">
-                        <p style="font-size:20px;"><b>{{ index + 1 }}. {{ disease }}</b></p>
-                    </li>
-                </ul>
+        </div>
+
+        <!-- Ô nhập và nút gửi -->
+        <div class="input-box">
+            <div class="preview" v-if="imagePreview">
+                <img :src="imagePreview" alt="Ảnh đã chọn" class="preview-image" />
+                <button class="remove-image-btn" @click="removeSelectedImage">✖</button>
             </div>
+            <textarea v-model="userMessage" placeholder="Nhập câu hỏi..." @keyup.enter="sendMessage"
+                class="input-textarea"></textarea>
+            <input type="file" id="fileInput" accept="image/*" @change="onImageSelected" />
+            <label for="fileInput" class="file-label">Thêm ảnh</label>
+            <button @click="sendMessage">Gửi</button>
         </div>
     </div>
 </template>
 
 <script>
+import axios from "axios"; // Import thư viện axios để gửi request
 import PredictService from "../services/predict.service";
 
 export default {
-    components: {
-    },
+    name: "ChatBox",
     data() {
         return {
-            diseases: [],
-            loading: false,
-            error: null,
-            selectedFile: null,
-            imageUrl: null,
+            userMessage: "", // Tin nhắn người dùng nhập
+            chatMessages: [
+                { text: "Xin chào! Tôi có thể giúp gì về các loại bệnh ở lúa?", sender: "bot" }
+            ], // Lịch sử tin nhắn
+            selectedImage: null, // File ảnh người dùng chọn
+            imagePreview: null, // URL hiển thị ảnh tạm thời
         };
     },
     methods: {
-        onFileChange(event) {
-            this.diseases = [];
-            this.selectedFile = event.target.files[0];
-            this.imageUrl = URL.createObjectURL(this.selectedFile); 
-        },
-        async uploadImage() {
-            if (!this.selectedFile) {
-                this.error = 'Please select an image file';
-                return;
+        async sendMessage() {
+            if (this.userMessage.trim() === "" && !this.selectedImage) {
+                return; // Không có text hoặc ảnh => không gửi
             }
 
-            this.loading = true;
-            this.error = null;
+            // Thêm text vào danh sách tin nhắn
+            if (this.userMessage.trim() !== "") {
+                this.chatMessages.push({ text: this.userMessage, sender: "user" });
+            }
+
+            // Thêm ảnh vào danh sách tin nhắn
+            if (this.selectedImage) {
+                this.chatMessages.push({ image: this.imagePreview, sender: "user" });
+            }
 
             const formData = new FormData();
-            formData.append('image_input', this.selectedFile);
+
+            // Thêm text và ảnh vào formData để gửi lên backend
+            if (this.userMessage.trim() !== "") {
+                formData.append("question", this.userMessage);
+            }
+            if (this.selectedImage) {
+                formData.append("image", this.selectedImage);
+            }
+            console.log(this.userMessage)
+            console.log(this.selectedImage)
+            console.log(formData)
+            // Reset input text và ảnh sau khi gửi
+            this.userMessage = "";
+            this.selectedImage = null;
+            this.imagePreview = null;
+
             try {
+                
                 const response = await PredictService.uploadImage(formData);
-                // this.diseases = response.data;
-                this.diseases.push(response.data.output);
-                console.log(response.data)
+                console.log("API Response:", response);
+
+                // Thêm câu trả lời của bot vào danh sách
+                if (response.data && response.data.answer) {
+                    this.chatMessages.push({ text: response.data.answer, sender: "bot" });
+                } else {
+                    this.chatMessages.push({ text: "Xin lỗi, không nhận được câu trả lời!", sender: "bot" });
+                }
             } catch (error) {
-                this.error = 'Failed to upload image or load diseases';
-                console.error(error);
-            } finally {
-                this.loading = false;
+                console.error("Lỗi khi gửi yêu cầu:", error);
+                this.chatMessages.push({ text: "Xin lỗi, có lỗi xảy ra!", sender: "bot" });
             }
         },
-
-    }
+        onImageSelected(event) {
+            // Khi chọn ảnh, tạo URL tạm thời để hiển thị
+            this.selectedImage = event.target.files[0];
+            this.imagePreview = URL.createObjectURL(this.selectedImage);
+        },
+        removeSelectedImage() {
+            // Xóa ảnh đã chọn
+            this.selectedImage = null;
+            this.imagePreview = null;
+            const fileInput = document.getElementById("fileInput");
+            if (fileInput) {
+                fileInput.value = null; // Reset giá trị của input file
+            }
+        },
+    },
 };
 </script>
 
+
 <style scoped>
-
-
-.image-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Center content horizontally */
-    margin-top: 20px;
-}
-
-.image-container img {
-    margin-bottom: 20px;
-}
-
-ul {
-    list-style-type: none;
-    padding: 0;
-    text-align: center; /* Center text */
-}
-
-.form-box {
-    border: 1px solid #ccc;
-    padding: 30px;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    background-color: #f9f9f9;
-
-}
-
-.submit-button {
-    -moz-box-shadow: inset 0px 1px 0px 0px #ffffff;
-    -webkit-box-shadow: inset 0px 1px 0px 0px #ffffff;
-    box-shadow: inset 0px 1px 0px 0px #ffffff;
-    background: -webkit-gradient(linear, left top, left bottom, color-stop(0.05, #ededed), color-stop(1, #dfdfdf));
-    background: -moz-linear-gradient(center top, #ededed 5%, #dfdfdf 100%);
-    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ededed', endColorstr='#dfdfdf');
-    background-color: #ededed;
-    -webkit-border-top-left-radius: 23px;
-    -moz-border-radius-topleft: 23px;
-    border-top-left-radius: 23px;
-    -webkit-border-top-right-radius: 23px;
-    -moz-border-radius-topright: 23px;
-    border-top-right-radius: 23px;
-    -webkit-border-bottom-right-radius: 23px;
-    -moz-border-radius-bottomright: 23px;
-    border-bottom-right-radius: 23px;
-    -webkit-border-bottom-left-radius: 23px;
-    -moz-border-radius-bottomleft: 23px;
-    border-bottom-left-radius: 23px;
-    text-indent: 0;
-    border: 1px solid #dcdcdc;
-    display: inline-block;
-    color: #130707;
-    font-family: Arial;
-    font-size: 16px;
-    font-weight: bold;
-    font-style: normal;
-    height: 32px;
-    line-height: 32px;
-    width: 104px;
-    text-decoration: none;
-    text-align: center;
-    text-shadow: 1px 1px 0px #ffffff;
-}
-
-.submit-button:hover {
-    background: -webkit-gradient(linear, left top, left bottom, color-stop(0.05, #dfdfdf), color-stop(1, #ededed));
-    background: -moz-linear-gradient(center top, #dfdfdf 5%, #ededed 100%);
-    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#dfdfdf', endColorstr='#ededed');
-    background-color: #dfdfdf;
-}
-
-.submit-button:active {
-    position: relative;
-    top: 1px;
-}
-
-.container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-}
-
-.formInput {
+/* Tổng thể khung chat */
+.chat-container {
     width: 100%;
-    /* max-width: 800px; */
-    margin-bottom: 20px;
+    max-width: 500px;
+    margin: 20px auto;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 600px;
+    background-color: #f9fafb;
+    border: 1px solid rgb(190, 184, 184);
 }
 
-ul {
-    list-style-type: none;
-    padding: 0;
+
+/* Khu vực hiển thị tin nhắn */
+.messages {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    /* Khoảng cách giữa các tin nhắn */
 }
 
-li {
-    margin-bottom: 20px;
+/* Tin nhắn của bot (trái) */
+.message.bot {
+    align-self: flex-start;
+    background-color: #3a3a55;
+    /* Nền xám đậm */
+    color: #fff;
+    /* Chữ trắng */
+    padding: 10px 15px;
+    border-radius: 15px 15px 15px 0;
+    /* Bo góc cho tin nhắn bot */
+    max-width: 70%;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+/* Tin nhắn của người dùng (phải) */
+.message.user {
+    align-self: flex-end;
+    background-color: #d4d4d4;
+    /* Nền cam */
+    color: black;
+    /* Chữ trắng */
+    padding: 10px 15px;
+    border-radius: 15px 15px 0 15px;
+    /* Bo góc cho tin nhắn người dùng */
+    max-width: 70%;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+/* Tin nhắn nhiều dòng sẽ tự động xuống hàng */
+.message {
+    display: inline-block;
+    word-break: break-word;
+}
+
+/* Hình ảnh trong tin nhắn */
+.message-image {
+    max-width: 100%;
+    border-radius: 10px;
+    margin-top: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Khu vực nhập */
+.input-box {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-top: 1px solid #ddd;
+    background-color: #f4f7f6;
+    gap: 10px;
+    /* Khoảng cách giữa các thành phần */
+}
+
+/* Ô nhập tin nhắn */
+input[type="text"] {
+    flex: 1;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    font-size: 14px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: #4caf50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+/* Ô nhập tin nhắn (textarea) */
+.input-textarea {
+    flex: 1;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    font-size: 14px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    resize: none;
+    /* Tắt nút kéo giãn */
+    overflow: hidden;
+    /* Ẩn thanh cuộn ngang */
+    line-height: 1.5;
+    min-height: 40px;
+    /* Chiều cao tối thiểu */
+    max-height: 100px;
+    /* Chiều cao tối đa */
+    background-color: #fff;
+    /* Nền trắng */
+}
+
+.input-textarea:focus {
+    outline: none;
+    border-color: #4caf50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+/* Nút thêm ảnh */
+input[type="file"] {
+    display: none;
+}
+
+.file-label {
+    padding: 10px 15px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    background-color: #2196f3;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.file-label:hover {
+    background-color: #1976d2;
+}
+
+/* Nút gửi */
+button {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    background-color: #4caf50;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* Hiển thị ảnh đã chọn */
+.preview {
+    display: flex;
+    align-items: center;
+    position: relative;
+    gap: 5px;
+}
+
+.preview-image {
+    max-width: 80px;
+    max-height: auto;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.remove-image-btn {
+    background: #ff6b6b;
+    color: #fff;
+    font-size: 14px;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: absolute;
+    top: 0;
+    right: 0;
+    transform: translate(50%, -50%);
+}
+
+.remove-image-btn:hover {
+    background: #ff3b3b;
 }
 </style>
