@@ -4,7 +4,7 @@
         <div class="messages">
             <div v-for="(message, index) in chatMessages" :key="index" :class="['message', message.sender]">
                 <span v-if="message.text">{{ message.text }}</span>
-                <img v-if="message.image" :src="message.image" alt="Hình ảnh" class="message-image" />
+                <img v-if="message.image" :src="message.image" alt="Image" class="message-image" />
             </div>
         </div>
 
@@ -33,7 +33,7 @@ export default {
         return {
             userMessage: "", // Tin nhắn người dùng nhập
             chatMessages: [
-                { text: "Xin chào! Tôi có thể giúp gì về các loại bệnh ở lúa?", sender: "bot" }
+                { text: "Hello! How can I help you?", sender: "bot" }
             ], // Lịch sử tin nhắn
             selectedImage: null, // File ảnh người dùng chọn
             imagePreview: null, // URL hiển thị ảnh tạm thời
@@ -81,11 +81,11 @@ export default {
                 if (response.data && response.data.answer) {
                     this.chatMessages.push({ text: response.data.answer, sender: "bot" });
                 } else {
-                    this.chatMessages.push({ text: "Xin lỗi, không nhận được câu trả lời!", sender: "bot" });
+                    this.chatMessages.push({ text: "Sorry, no answer was received!", sender: "bot" });
                 }
             } catch (error) {
                 console.error("Lỗi khi gửi yêu cầu:", error);
-                this.chatMessages.push({ text: "Xin lỗi, có lỗi xảy ra!", sender: "bot" });
+                this.chatMessages.push({ text: "Sorry, an error occurred!", sender: "bot" });
             }
         },
         onImageSelected(event) {
