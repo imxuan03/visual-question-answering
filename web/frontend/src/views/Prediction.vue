@@ -14,11 +14,11 @@
                 <img :src="imagePreview" alt="Ảnh đã chọn" class="preview-image" />
                 <button class="remove-image-btn" @click="removeSelectedImage">✖</button>
             </div>
-            <textarea v-model="userMessage" placeholder="Nhập câu hỏi..." @keyup.enter="sendMessage"
+            <textarea v-model="userMessage" placeholder="Enter your question..." @keyup.enter="sendMessage"
                 class="input-textarea"></textarea>
             <input type="file" id="fileInput" accept="image/*" @change="onImageSelected" />
-            <label for="fileInput" class="file-label">Thêm ảnh</label>
-            <button @click="sendMessage">Gửi</button>
+            <label for="fileInput" class="file-label">Add Image</label>
+            <button @click="sendMessage">Send</button>
         </div>
     </div>
 </template>
@@ -65,13 +65,15 @@ export default {
             if (this.userMessage.trim() !== "") {
                 this.chatMessages.push({ text: this.userMessage, sender: "user" });
             } else {
-                this.chatMessages.push({ text: "Vui lòng nhập câu hỏi!", sender: "bot" });
+                this.chatMessages.push({ text: "Please provide a question to accompany the image!", sender: "bot" });
+                this.scrollToBottom(); // Cuộn xuống cuối cùng
                 return;
             }
 
             // Nếu chưa có ảnh nào được gửi, thông báo yêu cầu tải ảnh
             if (!this.persistedImage) {
-                this.chatMessages.push({ text: "Vui lòng tải ảnh để tiếp tục!", sender: "bot" });
+                this.chatMessages.push({ text: "Please upload an image to proceed with the question!", sender: "bot" });
+                this.scrollToBottom(); // Cuộn xuống cuối cùng
                 return;
             }
 
@@ -92,11 +94,13 @@ export default {
                 if (response.data && response.data.answer) {
                     this.chatMessages.push({ text: response.data.answer, sender: "bot" });
                 } else {
-                    this.chatMessages.push({ text: "Xin lỗi, không nhận được câu trả lời!", sender: "bot" });
+                    this.chatMessages.push({ text: "Sorry, no answer was received!", sender: "bot" });
                 }
             } catch (error) {
                 console.error("Error sending request:", error);
-                this.chatMessages.push({ text: "Xin lỗi, đã xảy ra lỗi khi gửi yêu cầu!", sender: "bot" });
+                this.chatMessages.push({ text: "Sorry, an error occurred!", sender: "bot" });
+            } finally {
+                this.scrollToBottom(); // Cuộn xuống cuối cùng
             }
         },
         onImageSelected(event) {
@@ -121,6 +125,19 @@ export default {
                 fileInput.value = null;
             }
         },
+        scrollToBottom() {
+            // Cuộn xuống cuối khung chat
+            this.$nextTick(() => {
+                const messagesContainer = this.$refs.messages;
+                if (messagesContainer) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            });
+        },
+    },
+    mounted() {
+        // Cuộn xuống cuối khung chat khi khởi động
+        this.scrollToBottom();
     },
 
 };
