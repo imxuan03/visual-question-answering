@@ -1,7 +1,7 @@
 <template>
     <div class="chat-container">
         <!-- Hiển thị tin nhắn -->
-        <div class="messages">
+        <div class="messages" ref="messages">
             <div v-for="(message, index) in chatMessages" :key="index" :class="['message', message.sender]">
                 <span v-if="message.text">{{ message.text }}</span>
                 <img v-if="message.image" :src="message.image" alt="Image" class="message-image" />
@@ -31,79 +31,93 @@ export default {
     name: "ChatBox",
     data() {
         return {
-            userMessage: "", // Tin nhắn người dùng nhập
+            userMessage: "", // User's input message
             chatMessages: [
                 { text: "Hello! How can I help you?", sender: "bot" }
-            ], // Lịch sử tin nhắn
-            selectedImage: null, // File ảnh người dùng chọn
-            imagePreview: null, // URL hiển thị ảnh tạm thời
+            ], // Message history
+            selectedImage: null, // Currently selected image
+            imagePreview: null, // Temporary URL for selected image
+            persistedImage: null, // Persisted image for reuse
+            isFirstImageMessage: true, // Flag to control image display in chat
         };
     },
     methods: {
         async sendMessage() {
-            if (this.userMessage.trim() === "" && !this.selectedImage) {
-                return; // Không có text hoặc ảnh => không gửi
+            // Add the image to the chat first (if selected or persisted)
+            if (this.selectedImage || this.persistedImage) {
+                const imageToShow = this.selectedImage ? this.imagePreview : this.persistedImagePreview;
+                if (imageToShow) {
+                    this.chatMessages.push({ image: imageToShow, sender: "user" });
+                }
+
+                // If a new image is selected, persist it for reuse
+                if (this.selectedImage) {
+                    this.persistedImage = this.selectedImage;
+                    this.persistedImagePreview = this.imagePreview;
+                    this.selectedImage = null; // Clear temporary selection
+                    this.imagePreview = null;
+                }
             }
 
-            // Thêm text vào danh sách tin nhắn
+            // Add text to chat if provided
             if (this.userMessage.trim() !== "") {
                 this.chatMessages.push({ text: this.userMessage, sender: "user" });
             }
 
-            // Thêm ảnh vào danh sách tin nhắn
-            if (this.selectedImage) {
-                this.chatMessages.push({ image: this.imagePreview, sender: "user" });
+            // Check if both text and image are available
+            if (!this.userMessage.trim()) {
+                this.chatMessages.push({ text: "Please provide a question to accompany the image!", sender: "bot" });
+                return;
             }
 
+            if (!this.persistedImage) {
+                this.chatMessages.push({ text: "Please upload an image to proceed with the question!", sender: "bot" });
+                return;
+            }
+
+            // Prepare the form data for submission
             const formData = new FormData();
+            formData.append("question", this.userMessage.trim());
+            formData.append("image", this.persistedImage);
 
-            // Thêm text và ảnh vào formData để gửi lên backend
-            if (this.userMessage.trim() !== "") {
-                formData.append("question", this.userMessage);
-            }
-            if (this.selectedImage) {
-                formData.append("image", this.selectedImage);
-            }
-            console.log(this.userMessage)
-            console.log(this.selectedImage)
-            console.log(formData)
-            // Reset input text và ảnh sau khi gửi
+            // Reset the input text after submission
             this.userMessage = "";
-            this.selectedImage = null;
-            this.imagePreview = null;
 
             try {
-                
                 const response = await PredictService.uploadImage(formData);
                 console.log("API Response:", response);
 
-                // Thêm câu trả lời của bot vào danh sách
+                // Add bot's response to chat
                 if (response.data && response.data.answer) {
                     this.chatMessages.push({ text: response.data.answer, sender: "bot" });
                 } else {
                     this.chatMessages.push({ text: "Sorry, no answer was received!", sender: "bot" });
                 }
             } catch (error) {
-                console.error("Lỗi khi gửi yêu cầu:", error);
+                console.error("Error sending request:", error);
                 this.chatMessages.push({ text: "Sorry, an error occurred!", sender: "bot" });
             }
         },
         onImageSelected(event) {
-            // Khi chọn ảnh, tạo URL tạm thời để hiển thị
+            // Handle new image selection
             this.selectedImage = event.target.files[0];
             this.imagePreview = URL.createObjectURL(this.selectedImage);
         },
         removeSelectedImage() {
-            // Xóa ảnh đã chọn
+            // Clear selected and persisted images
             this.selectedImage = null;
             this.imagePreview = null;
+            this.persistedImage = null;
+            this.persistedImagePreview = null;
             const fileInput = document.getElementById("fileInput");
             if (fileInput) {
-                fileInput.value = null; // Reset giá trị của input file
+                fileInput.value = null; // Reset input file
             }
         },
     },
 };
+
+
 </script>
 
 
