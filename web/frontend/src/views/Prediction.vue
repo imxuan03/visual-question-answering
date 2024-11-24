@@ -43,78 +43,86 @@ export default {
     },
     methods: {
         async sendMessage() {
-            // Add the image to the chat first (if selected or persisted)
-            if (this.selectedImage || this.persistedImage) {
-                const imageToShow = this.selectedImage ? this.imagePreview : this.persistedImagePreview;
-                if (imageToShow) {
-                    this.chatMessages.push({ image: imageToShow, sender: "user" });
-                }
-
-                // If a new image is selected, persist it for reuse
+            // Nếu ảnh được chọn lần đầu hoặc đã lưu ảnh, hiển thị ảnh một lần
+            if (this.isFirstImageMessage) {
                 if (this.selectedImage) {
+                    this.chatMessages.push({ image: this.imagePreview, sender: "user" });
+
+                    // Lưu ảnh đã chọn để sử dụng cho các câu hỏi sau
                     this.persistedImage = this.selectedImage;
                     this.persistedImagePreview = this.imagePreview;
-                    this.selectedImage = null; // Clear temporary selection
+
+                    // Reset ảnh tạm thời sau khi lưu
+                    this.selectedImage = null;
                     this.imagePreview = null;
+
+                    // Đánh dấu ảnh đã được gửi lần đầu
+                    this.isFirstImageMessage = false;
                 }
             }
 
-            // Add text to chat if provided
+            // Thêm câu hỏi của người dùng vào khung chat
             if (this.userMessage.trim() !== "") {
                 this.chatMessages.push({ text: this.userMessage, sender: "user" });
-            }
-
-            // Check if both text and image are available
-            if (!this.userMessage.trim()) {
-                this.chatMessages.push({ text: "Please provide a question to accompany the image!", sender: "bot" });
+            } else {
+                this.chatMessages.push({ text: "Vui lòng nhập câu hỏi!", sender: "bot" });
                 return;
             }
 
+            // Nếu chưa có ảnh nào được gửi, thông báo yêu cầu tải ảnh
             if (!this.persistedImage) {
-                this.chatMessages.push({ text: "Please upload an image to proceed with the question!", sender: "bot" });
+                this.chatMessages.push({ text: "Vui lòng tải ảnh để tiếp tục!", sender: "bot" });
                 return;
             }
 
-            // Prepare the form data for submission
+            // Tạo dữ liệu form để gửi lên API
             const formData = new FormData();
             formData.append("question", this.userMessage.trim());
             formData.append("image", this.persistedImage);
 
-            // Reset the input text after submission
+            // Reset nội dung tin nhắn sau khi gửi
             this.userMessage = "";
 
             try {
+                // Gửi dữ liệu đến API
                 const response = await PredictService.uploadImage(formData);
                 console.log("API Response:", response);
 
-                // Add bot's response to chat
+                // Thêm câu trả lời từ bot vào khung chat
                 if (response.data && response.data.answer) {
                     this.chatMessages.push({ text: response.data.answer, sender: "bot" });
                 } else {
-                    this.chatMessages.push({ text: "Sorry, no answer was received!", sender: "bot" });
+                    this.chatMessages.push({ text: "Xin lỗi, không nhận được câu trả lời!", sender: "bot" });
                 }
             } catch (error) {
                 console.error("Error sending request:", error);
-                this.chatMessages.push({ text: "Sorry, an error occurred!", sender: "bot" });
+                this.chatMessages.push({ text: "Xin lỗi, đã xảy ra lỗi khi gửi yêu cầu!", sender: "bot" });
             }
         },
         onImageSelected(event) {
-            // Handle new image selection
+            // Xử lý ảnh khi người dùng chọn
             this.selectedImage = event.target.files[0];
             this.imagePreview = URL.createObjectURL(this.selectedImage);
+
+            // Đặt lại cờ để cho phép hiển thị ảnh lần đầu
+            this.isFirstImageMessage = true;
         },
         removeSelectedImage() {
-            // Clear selected and persisted images
+            // Xóa ảnh được chọn hoặc đã lưu
             this.selectedImage = null;
             this.imagePreview = null;
             this.persistedImage = null;
             this.persistedImagePreview = null;
+            this.isFirstImageMessage = true; // Cho phép gửi ảnh lại nếu cần
+
+            // Đặt lại input file
             const fileInput = document.getElementById("fileInput");
             if (fileInput) {
-                fileInput.value = null; // Reset input file
+                fileInput.value = null;
             }
         },
     },
+
 };
 
 
