@@ -1,5 +1,5 @@
 import torch
-from transformers import ViTFeatureExtractor, BertTokenizer, BertModel, ViTModel
+from transformers import ViTImageProcessor, BertTokenizer, BertModel, ViTModel
 from PIL import Image
 from django.http import JsonResponse
 from rest_framework.views import APIView
@@ -10,7 +10,7 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
 # Đường dẫn tới file CSV
-csv_path = 'E:/Niên Luận/VQA/NienLuan/vqa_dataset.csv'  # Thay bằng đường dẫn file của bạn
+csv_path = 'E:/Niên Luận/VQA/NienLuan/train_vqa_dataset.csv'  # Thay bằng đường dẫn file của bạn
 data = pd.read_csv(csv_path)
 
 # Tính toán output_dim dựa trên số câu trả lời duy nhất
@@ -25,7 +25,7 @@ label_encoder = LabelEncoder()
 label_encoder.fit(data['answer'])  # Mã hóa các câu trả lời
 
 # Load các mô hình
-feature_extractor = ViTFeatureExtractor.from_pretrained('google/vit-base-patch16-224')
+feature_extractor = ViTImageProcessor.from_pretrained('google/vit-base-patch16-224')
 model_vit = ViTModel.from_pretrained('google/vit-base-patch16-224')
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 model_bert = BertModel.from_pretrained('bert-base-uncased')
@@ -47,9 +47,11 @@ class VQAModel(torch.nn.Module):
 # Khởi tạo model và load weights
 input_dim = 768 + 768  # 768 cho ViT và 768 cho BERT
 hidden_dim = 512
-model_path = 'E:/Niên Luận/VQA/NienLuan/web/backend/backend/models/vqa_model.pth'  # Thay bằng đường dẫn model đã lưu
+model_path = 'E:/Niên Luận/VQA/NienLuan/web/backend/backend/models/vqa_model_final12.pth'  # Thay bằng đường dẫn model đã lưu
 model = VQAModel(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim)
-model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+
+checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
+model.load_state_dict(checkpoint['model_state_dict'])
 model.eval()
 
 # Định nghĩa API view
