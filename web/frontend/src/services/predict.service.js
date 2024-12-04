@@ -1,10 +1,10 @@
 import createApiClient from "./api.service";
 
 class PredictService {
-    constructor(baseUrl = "/api/detect/") {
+    constructor(baseUrl = "/api/predict/") {
         this.api = createApiClient(baseUrl);
     }
-    async uploadImage(data) {
+    async predict(data) {
         const respone = await this.api.post("/", data);
         return respone;
     }

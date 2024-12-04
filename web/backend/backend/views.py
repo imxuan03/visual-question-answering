@@ -55,7 +55,7 @@ model.load_state_dict(checkpoint['model_state_dict'])
 model.eval()
 
 # Định nghĩa API view
-class ImageDetectAPI(APIView):
+class VqaAPI(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, *args, **kwargs):

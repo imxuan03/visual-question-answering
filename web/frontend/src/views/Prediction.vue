@@ -87,7 +87,7 @@ export default {
 
             try {
                 // Gửi dữ liệu đến API
-                const response = await PredictService.uploadImage(formData);
+                const response = await PredictService.predict(formData);
                 console.log("API Response:", response);
 
                 // Thêm câu trả lời từ bot vào khung chat

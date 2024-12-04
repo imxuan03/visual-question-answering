@@ -1,8 +1,8 @@
 from rest_framework import serializers
-from .models import Img_predictions
+from .models import Vqa_predictions
 
 
-class ImgPredictionsSerializer(serializers.ModelSerializer):
+class VqaPredictionsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Img_predictions
+        model = Vqa_predictions
         fields = '__all__'
