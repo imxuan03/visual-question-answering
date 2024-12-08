@@ -47,7 +47,7 @@ class VQAModel(torch.nn.Module):
 # Khởi tạo model và load weights
 input_dim = 768 + 768  # 768 cho ViT và 768 cho BERT
 hidden_dim = 512
-model_path = 'E:/Niên Luận/VQA/NienLuan/web/backend/backend/models/vqa_model_final12.pth'  # Thay bằng đường dẫn model đã lưu
+model_path = 'E:/Niên Luận/VQA/NienLuan/web/backend/backend/models/model_vqa.pth'  # Thay bằng đường dẫn model đã lưu
 model = VQAModel(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim)
 
 checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
